@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plagiarism Detection & String Matching Performance Analysis</title>
+
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            slate: {
+              950: '#020617',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Chart.js CDN for Performance Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col selection:bg-indigo-500/30 selection:text-indigo-200">
+
+  <!-- Toast / Notification Container (Replaces alert()) -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <!-- Brand / Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+          <!-- Inline SVG Logo -->
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight">
+            Plagiarism Detection Studio
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-400">
+            String Matching Algorithm Efficiency &amp; Performance Analysis
+          </p>
+        </div>
+      </div>
+
+      <!-- Mode Switcher Tabs -->
+      <nav class="flex bg-slate-900 p-1 rounded-xl border border-slate-800 w-full md:w-auto" role="tablist">
+        <button
+          id="tab-btn-analyzer"
+          role="tab"
+          aria-selected="true"
+          onclick="switchTab('analyzer')"
+          class="flex-1 md:flex-none px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <span>Plagiarism Analyzer</span>
+        </button>
+        <button
+          id="tab-btn-benchmark"
+          role="tab"
+          aria-selected="false"
+          onclick="switchTab('benchmark')"
+          class="flex-1 md:flex-none px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <span>Benchmark &amp; Complexity</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- ========================================================= -->
+    <!-- TAB 1: PLAGIARISM & PATTERN ANALYZER                      -->
+    <!-- ========================================================= -->
+    <section id="tab-analyzer" class="space-y-6">
+
+      <!-- Quick Presets & Controls Bar -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-200 uppercase tracking-wider">Load Sample Dataset</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Test Naïve, Rabin-Karp, and KMP with realistic or worst-case inputs.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="loadPreset('essay')" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm font-medium text-slate-200 transition-colors">
+            Academic Essay
+          </button>
+          <button onclick="loadPreset('tech')" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm font-medium text-slate-200 transition-colors">
+            Code / Tech Article
+          </button>
+          <button onclick="loadPreset('worstcase')" class="px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs sm:text-sm font-medium text-amber-300 transition-colors">
+            Worst-Case Repetitive Text
+          </button>
+          <button onclick="clearInputs()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-rose-950/60 border border-slate-700 hover:border-rose-500/40 text-xs sm:text-sm font-medium text-slate-400 hover:text-rose-300 transition-colors">
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Input Textareas Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Source / Original Document -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <label for="source-text" class="text-sm font-semibold text-indigo-300 flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+              Original / Source Document
+            </label>
+            <span id="source-count" class="text-xs font-mono text-slate-400">0 chars | 0 words</span>
+          </div>
+          <textarea
+            id="source-text"
+            rows="8"
+            placeholder="Paste the original reference text here..."
+            class="w-full flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500 resize-y font-sans leading-relaxed"
+          ></textarea>
+        </div>
+
+        <!-- Suspect / Target Document -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <label for="suspect-text" class="text-sm font-semibold text-emerald-300 flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              Suspect / Target Document
+            </label>
+            <span id="suspect-count" class="text-xs font-mono text-slate-400">0 chars | 0 words</span>
+          </div>
+          <textarea
+            id="suspect-text"
+            rows="8"
+            placeholder="Paste the document to check for plagiarism or pattern matches..."
+            class="w-full flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500 resize-y font-sans leading-relaxed"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Optional Pattern Search & Analysis Settings -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+          <!-- Specific Pattern Input -->
+          <div class="md:col-span-6">
+            <label for="specific-pattern" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              Specific Pattern Search <span class="text-slate-500 normal-case font-normal">(Optional — overrides n-gram phrase detection)</span>
+            </label>
+            <input
+              id="specific-pattern"
+              type="text"
+              placeholder="Leave empty for automatic document-to-document plagiarism check..."
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500 font-mono"
+            />
+          </div>
+
+          <!-- N-gram Phrase Size Selector -->
+          <div class="md:col-span-3">
+            <label for="ngram-size" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              Phrase Window (N-Gram)
+            </label>
+            <select
+              id="ngram-size"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500"
+            >
+              <option value="3">3-Word Phrases (Sensitive)</option>
+              <option value="4" selected>4-Word Phrases (Balanced)</option>
+              <option value="5">5-Word Phrases (Strict)</option>
+              <option value="6">6-Word Phrases (Very Strict)</option>
+            </select>
+          </div>
+
+          <!-- Run Analysis CTA -->
+          <div class="md:col-span-3">
+            <button
+              id="run-analysis-btn"
+              onclick="runPlagiarismAnalysis()"
+              class="w-full py-2.5 px-5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white font-semibold text-sm shadow-lg shadow-indigo-500/20 transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98]"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Run Analysis</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analysis Results Dashboard (Hidden until first run, auto-runs on load with preset) -->
+      <div id="results-dashboard" class="space-y-6">
+
+        <!-- Top Row: Similarity Score + Matched Highlights -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- Similarity Gauge Card -->
+          <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+            <span id="analysis-mode-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 mb-4">
+              Document N-Gram Matching
+            </span>
+
+            <!-- Circular Progress SVG -->
+            <div class="relative w-44 h-44 flex items-center justify-center">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="#1e293b" stroke-width="10" />
+                <circle
+                  id="similarity-ring"
+                  cx="60"
+                  cy="60"
+                  r="52"
+                  fill="none"
+                  stroke="#10b981"
+                  stroke-width="10"
+                  stroke-linecap="round"
+                  stroke-dasharray="326.73"
+                  stroke-dashoffset="326.73"
+                  class="transition-all duration-700 ease-out"
+                />
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="similarity-percent" class="text-4xl font-extrabold text-white tracking-tight">0%</span>
+                <span id="similarity-label" class="text-xs font-medium text-slate-400 mt-1">Similarity Score</span>
+              </div>
+            </div>
+
+            <!-- Verdict & Stats -->
+            <div id="verdict-badge" class="mt-4 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300">
+              Ready to analyze
+            </div>
+            <div class="w-full grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-slate-800 text-left">
+              <div class="bg-slate-950/70 rounded-xl p-3 border border-slate-800/80">
+                <div class="text-xs text-slate-400">Patterns Tested</div>
+                <div id="stat-patterns-tested" class="text-lg font-bold font-mono text-white mt-0.5">0</div>
+              </div>
+              <div class="bg-slate-950/70 rounded-xl p-3 border border-slate-800/80">
+                <div class="text-xs text-slate-400">Matches Found</div>
+                <div id="stat-matches-found" class="text-lg font-bold font-mono text-emerald-400 mt-0.5">0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Matched Highlights Viewer -->
+          <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div>
+                <h3 class="text-base font-bold text-white">Matched Segments Highlight</h3>
+                <p class="text-xs text-slate-400">Highlighted regions in the Suspect Document indicate exact matches detected by all three algorithms.</p>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-slate-400">
+                <span class="inline-block w-3 h-3 rounded bg-rose-500/35 border border-rose-500/60"></span>
+                <span>Matched Text</span>
+              </div>
+            </div>
+            <div
+              id="highlighted-output"
+              class="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-slate-300 leading-relaxed max-h-72 overflow-y-auto whitespace-pre-wrap break-words font-sans"
+            >
+              Run analysis to view highlighted matches...
+            </div>
+          </div>
+        </div>
+
+        <!-- Algorithm Performance Comparison Cards & Table -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 class="text-base sm:text-lg font-bold text-white">Live Algorithm Performance Comparison</h3>
+              <p class="text-xs sm:text-sm text-slate-400">Exact character comparisons and high-precision execution time measured via <code class="font-mono text-indigo-300">performance.now()</code>.</p>
+            </div>
+            <span id="fastest-algo-badge" class="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              Fastest: —
+            </span>
+          </div>
+
+          <!-- 3 Side-by-Side Metric Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Naive Card -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 relative overflow-hidden">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-bold text-rose-300">Naïve Matching</span>
+                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/20">O(n·m)</span>
+              </div>
+              <div class="space-y-2">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Execution Time</span>
+                  <span id="naive-time" class="font-mono font-semibold text-white">0.000 ms</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Char Comparisons</span>
+                  <span id="naive-comps" class="font-mono font-semibold text-rose-300">0</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Matches Found</span>
+                  <span id="naive-matches" class="font-mono font-semibold text-slate-200">0</span>
+                </div>
+              </div>
+              <div class="mt-3 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div id="naive-bar" class="h-full bg-rose-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Rabin-Karp Card -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 relative overflow-hidden">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-bold text-indigo-300">Rabin-Karp</span>
+                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">Rolling Hash</span>
+              </div>
+              <div class="space-y-2">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Execution Time</span>
+                  <span id="rk-time" class="font-mono font-semibold text-white">0.000 ms</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Char Comparisons</span>
+                  <span id="rk-comps" class="font-mono font-semibold text-indigo-300">0</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Hash Collisions / Matches</span>
+                  <span id="rk-matches" class="font-mono font-semibold text-slate-200">0 / 0</span>
+                </div>
+              </div>
+              <div class="mt-3 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div id="rk-bar" class="h-full bg-indigo-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- KMP Card -->
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 relative overflow-hidden">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-bold text-emerald-300">KMP Algorithm</span>
+                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">O(n + m)</span>
+              </div>
+              <div class="space-y-2">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Execution Time</span>
+                  <span id="kmp-time" class="font-mono font-semibold text-white">0.000 ms</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Char Comparisons</span>
+                  <span id="kmp-comps" class="font-mono font-semibold text-emerald-300">0</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Matches Found</span>
+                  <span id="kmp-matches" class="font-mono font-semibold text-slate-200">0</span>
+                </div>
+              </div>
+              <div class="mt-3 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                <div id="kmp-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detailed Comparison Table -->
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="bg-slate-950/90 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-800">
+                  <th class="py-3 px-4 font-semibold">Algorithm</th>
+                  <th class="py-3 px-4 font-semibold">Execution Time (ms)</th>
+                  <th class="py-3 px-4 font-semibold">Char Comparisons</th>
+                  <th class="py-3 px-4 font-semibold">Matches Found</th>
+                  <th class="py-3 px-4 font-semibold">Efficiency Insight</th>
+                </tr>
+              </thead>
+              <tbody id="comparison-table-body" class="divide-y divide-slate-800/80 text-slate-300">
+                <!-- Populated dynamically via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- TAB 2: PERFORMANCE BENCHMARK & COMPLEXITY STUDY           -->
+    <!-- ========================================================= -->
+    <section id="tab-benchmark" class="hidden space-y-6">
+
+      <!-- Benchmark Configuration Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+          <div>
+            <h2 class="text-lg font-bold text-white">Algorithm Scaling Benchmark</h2>
+            <p class="text-xs sm:text-sm text-slate-400">
+              Automatically benchmarks Naïve, Rabin-Karp, and KMP across document sizes (5K, 15K, 30K, 50K characters) to measure empirical time and comparison growth.
+            </p>
+          </div>
+          <button
+            id="run-benchmark-btn"
+            onclick="runBenchmarkSuite()"
+            class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white font-semibold text-sm shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 shrink-0 active:scale-[0.98]"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span id="benchmark-btn-text">Run Benchmark</span>
+          </button>
+        </div>
+
+        <!-- Controls Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Pattern Length -->
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+            <label for="bench-pattern-len" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Pattern Length (m)
+            </label>
+            <select
+              id="bench-pattern-len"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="5">5 Characters (Short)</option>
+              <option value="20" selected>20 Characters (Medium)</option>
+              <option value="50">50 Characters (Long)</option>
+            </select>
+          </div>
+
+          <!-- Input Distribution Toggle -->
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+            <span class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Dataset Distribution
+            </span>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                id="dist-normal-btn"
+                onclick="setBenchmarkMode('normal')"
+                class="py-2 px-3 rounded-lg text-xs font-semibold transition-all bg-indigo-600 text-white"
+              >
+                Normal Text
+              </button>
+              <button
+                id="dist-worst-btn"
+                onclick="setBenchmarkMode('worst')"
+                class="py-2 px-3 rounded-lg text-xs font-semibold transition-all bg-slate-800 text-slate-300 hover:bg-slate-700"
+              >
+                Worst-Case (AAA...B)
+              </button>
+            </div>
+          </div>
+
+          <!-- Document Sizes Info -->
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+            <span class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Test Document Sizes (n)
+            </span>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="px-2.5 py-1 rounded-md bg-slate-800 text-slate-200 font-mono text-xs">5,000</span>
+              <span class="px-2.5 py-1 rounded-md bg-slate-800 text-slate-200 font-mono text-xs">15,000</span>
+              <span class="px-2.5 py-1 rounded-md bg-slate-800 text-slate-200 font-mono text-xs">30,000</span>
+              <span class="px-2.5 py-1 rounded-md bg-slate-800 text-slate-200 font-mono text-xs">50,000</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Execution Time Chart -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <div class="mb-4">
+            <h3 class="text-base font-bold text-white">Execution Time vs. Document Size</h3>
+            <p class="text-xs text-slate-400">Lower is better — measured in milliseconds (ms).</p>
+          </div>
+          <div class="relative h-72 w-full">
+            <canvas id="timeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Character Comparisons Chart -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <div class="mb-4">
+            <h3 class="text-base font-bold text-white">Character Comparisons vs. Document Size</h3>
+            <p class="text-xs text-slate-400">Exact number of character-level equality checks performed.</p>
+          </div>
+          <div class="relative h-72 w-full">
+            <canvas id="compChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empirical Benchmark Results Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6">
+        <h3 class="text-base font-bold text-white mb-1">Empirical Benchmark Measurements</h3>
+        <p class="text-xs text-slate-400 mb-4">Raw data collected from the latest benchmark run.</p>
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead>
+              <tr class="bg-slate-950 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <th class="py-3 px-4 font-semibold">Doc Size (n)</th>
+                <th class="py-3 px-4 font-semibold text-rose-300">Naïve (ms / comps)</th>
+                <th class="py-3 px-4 font-semibold text-indigo-300">Rabin-Karp (ms / comps)</th>
+                <th class="py-3 px-4 font-semibold text-emerald-300">KMP (ms / comps)</th>
+              </tr>
+            </thead>
+            <tbody id="benchmark-table-body" class="divide-y divide-slate-800 text-slate-300 font-mono">
+              <!-- Populated via JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Theoretical Complexity Comparison Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6">
+        <h3 class="text-base sm:text-lg font-bold text-white mb-1">Theoretical Asymptotic Complexity Study</h3>
+        <p class="text-xs sm:text-sm text-slate-400 mb-4">
+          Where <code class="font-mono text-indigo-300">n</code> is the document length, <code class="font-mono text-indigo-300">m</code> is the pattern length, and <code class="font-mono text-indigo-300">k</code> is the number of matches.
+        </p>
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-950 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-800">
+                <th class="py-3.5 px-4 font-semibold">Algorithm</th>
+                <th class="py-3.5 px-4 font-semibold">Preprocessing</th>
+                <th class="py-3.5 px-4 font-semibold">Best Case</th>
+                <th class="py-3.5 px-4 font-semibold">Average Case</th>
+                <th class="py-3.5 px-4 font-semibold">Worst Case</th>
+                <th class="py-3.5 px-4 font-semibold">Space Complexity</th>
+                <th class="py-3.5 px-4 font-semibold">Key Strength</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800 text-slate-300">
+              <tr class="hover:bg-slate-800/40 transition-colors">
+                <td class="py-3.5 px-4 font-semibold text-rose-300">Naïve Matching</td>
+                <td class="py-3.5 px-4 font-mono text-xs">O(1)</td>
+                <td class="py-3.5 px-4 font-mono text-xs text-emerald-300">O(n)</td>
+                <td class="py-3.5 px-4 font-mono text-xs">O(n + m)</td>
+                <td class="py-3.5 px-4 font-mono text-xs text-rose-400">O(n · m)</td>
+                <td class="py-3.5 px-4 font-mono text-xs">O(1)</td>
+                <td class="py-3.5 px-4 text-xs text-slate-400">Zero preprocessing; fast on short non-repetitive text.</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40 transition-colors">
+                <td class="py-3.5 px-4 font-semibold text-indigo-300">Rabin-Karp</td>
+                <td class="py-3.5 px-4 font-mono text-xs">O(m)</td>
+                <td class="py-3.5 px-4 font-mono text-xs text-emerald-300">O(n + m)</td>
+                <td class="py-3.5 px-4 font-mono text-xs">O(n + m)</td>
+                <td class="py-3.5 px-4 font-mono text-xs text-amber-400">O(n · m)</td>
+                <td class="py-3.5 px-4 font-mono text-xs">O(1)</td>
+                <td class="py-3.5 px-4 text-xs text-slate-400">Ideal for multi-pattern plagiarism detection via rolling hash.</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40 transition-colors">
+                <td class="py-3.5 px-4 font-semibold text-emerald-300">KMP Algorithm</td>
+                <td class="py-3.5 px-4 font-mono text-xs">O(m)</td>
+                <td class="py-3.5 px-4 font-mono text-xs text-emerald-300">O(n + m)</td>
+                <td class="py-3.5 px-4 font-mono text-xs text-emerald-300">O(n + m)</td>
+                <td class="py-3.5 px-4 font-mono text-xs text-emerald-300">O(n + m)</td>
+                <td class="py-3.5 px-4 font-mono text-xs">O(m)</td>
+                <td class="py-3.5 px-4 text-xs text-slate-400">Guaranteed linear worst-case; never backtracks text pointer.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/80 bg-slate-950/90 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+      <div>
+        <span class="font-semibold text-slate-200">Capstone Project 6:</span> Plagiarism Detection Using String Matching Algorithms
+      </div>
+      <div>
+        Comparative Study of Algorithm Efficiency &amp; Performance Analysis • Built with HTML, Tailwind CSS &amp; Chart.js
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================================= -->
+  <!-- JAVASCRIPT: CORE ALGORITHMS, ANALYZER & BENCHMARK ENGINE  -->
+  <!-- ========================================================= -->
+  <script>
+    /**
+     * =========================================================================
+     * 1. CORE STRING MATCHING ALGORITHMS
+     * Each function returns: { matches: number[], comparisons: number, collisions?: number }
+     * =========================================================================
+     */
+
+    /**
+     * Naïve Pattern Matching Algorithm
+     * Slides pattern over text one character at a time and checks character-by-character.
+     */
+    function naiveSearch(text, pattern) {
+      const n = text.length;
+      const m = pattern.length;
+      const matches = [];
+      let comparisons = 0;
+
+      if (m === 0 || m > n) {
+        return { matches, comparisons };
+      }
+
+      for (let i = 0; i <= n - m; i++) {
+        let j = 0;
+        while (j < m) {
+          comparisons++;
+          if (text[i + j] !== pattern[j]) {
+            break;
+          }
+          j++;
+        }
+        if (j === m) {
+          matches.push(i);
+        }
+      }
+
+      return { matches, comparisons };
+    }
+
+    /**
+     * Rabin-Karp Pattern Matching Algorithm
+     * Uses polynomial rolling hash to filter non-matching windows in O(1) time.
+     * Verifies character-by-character only when hash values match (collision check).
+     */
+    function rabinKarpSearch(text, pattern) {
+      const n = text.length;
+      const m = pattern.length;
+      const matches = [];
+      let comparisons = 0;
+      let collisions = 0;
+
+      if (m === 0 || m > n) {
+        return { matches, comparisons, collisions };
+      }
+
+      const d = 256;          // Number of characters in ASCII/extended alphabet
+      const q = 1000003;      // Large prime modulus to minimize spurious hash collisions
+      let h = 1;              // d^(m-1) % q
+      let pHash = 0;          // Hash value for pattern
+      let tHash = 0;          // Hash value for current text window
+
+      // Compute h = (d^(m-1)) % q
+      for (let i = 0; i < m - 1; i++) {
+        h = (h * d) % q;
+      }
+
+      // Compute initial hash values for pattern and first window of text
+      for (let i = 0; i < m; i++) {
+        pHash = (d * pHash + pattern.charCodeAt(i)) % q;
+        tHash = (d * tHash + text.charCodeAt(i)) % q;
+      }
+
+      // Slide pattern over text
+      for (let i = 0; i <= n - m; i++) {
+        // If hashes match, verify characters to confirm real match vs spurious collision
+        if (pHash === tHash) {
+          let match = true;
+          for (let j = 0; j < m; j++) {
+            comparisons++;
+            if (text[i + j] !== pattern[j]) {
+              match = false;
+              collisions++;
+              break;
+            }
+          }
+          if (match) {
+            matches.push(i);
+          }
+        }
+
+        // Compute rolling hash for next window
+        if (i < n - m) {
+          tHash = (d * (tHash - text.charCodeAt(i) * h) + text.charCodeAt(i + m)) % q;
+          if (tHash < 0) {
+            tHash += q;
+          }
+        }
+      }
+
+      return { matches, comparisons, collisions };
+    }
+
+    /**
+     * Knuth-Morris-Pratt (KMP) Pattern Matching Algorithm
+     * Precomputes the Longest Proper Prefix which is also Suffix (LPS) array
+     * so the text index never moves backward.
+     */
+    function computeLPS(pattern) {
+      const m = pattern.length;
+      const lps = new Array(m).fill(0);
+      let len = 0;
+      let i = 1;
+      let lpsComparisons = 0;
+
+      while (i < m) {
+        lpsComparisons++;
+        if (pattern[i] === pattern[len]) {
+          len++;
+          lps[i] = len;
+          i++;
+        } else {
+          if (len !== 0) {
+            len = lps[len - 1];
+          } else {
+            lps[i] = 0;
+            i++;
+          }
+        }
+      }
+      return { lps, lpsComparisons };
+    }
+
+    function kmpSearch(text, pattern) {
+      const n = text.length;
+      const m = pattern.length;
+      const matches = [];
+      let comparisons = 0;
+
+      if (m === 0 || m > n) {
+        return { matches, comparisons };
+      }
+
+      const { lps, lpsComparisons } = computeLPS(pattern);
+      comparisons += lpsComparisons;
+
+      let i = 0; // Index for text
+      let j = 0; // Index for pattern
+
+      while (i < n) {
+        comparisons++;
+        if (pattern[j] === text[i]) {
+          i++;
+          j++;
+        }
+
+        if (j === m) {
+          matches.push(i - j);
+          j = lps[j - 1];
+        } else if (i < n && pattern[j] !== text[i]) {
+          if (j !== 0) {
+            j = lps[j - 1];
+          } else {
+            i++;
+          }
+        }
+      }
+
+      return { matches, comparisons };
+    }
+
+    /**
+     * =========================================================================
+     * 2. SAMPLE PRESET DATASETS
+     * =========================================================================
+     */
+    const PRESETS = {
+      essay: {
+        source:
+          "Artificial intelligence has transformed modern computing by enabling machines to learn from massive datasets and make autonomous decisions. Machine learning algorithms identify complex patterns that are often invisible to human analysts. In healthcare, predictive models assist doctors in diagnosing diseases at an early stage, significantly improving patient survival rates. Furthermore, natural language processing systems now power real-time translation, automated summarization, and intelligent virtual assistants across global industries.",
+        suspect:
+          "Recent advancements show that artificial intelligence has transformed modern computing by enabling machines to learn from massive datasets and improve digital workflows. Many organizations rely on automation today. Specifically, in healthcare, predictive models assist doctors in diagnosing diseases at an early stage, which reduces hospital costs. Additionally, natural language processing systems now power real-time translation, automated summarization, and intelligent virtual assistants in everyday smartphones.",
+        pattern: ""
+      },
+      tech: {
+        source:
+          "String matching algorithms form the backbone of text editors, search engines, DNA sequence analysis, and plagiarism detection tools. While the Naive algorithm checks every possible shift in O(n*m) worst-case time, the Knuth-Morris-Pratt algorithm uses a prefix function to guarantee O(n+m) linear time complexity. Meanwhile, Rabin-Karp leverages polynomial rolling hashes to efficiently search for multiple patterns simultaneously across large document collections.",
+        suspect:
+          "Modern search engines rely heavily on fast substring search. String matching algorithms form the backbone of text editors, search engines, DNA sequence analysis, and plagiarism detection tools. Developers often compare brute force with optimized methods. For instance, the Knuth-Morris-Pratt algorithm uses a prefix function to guarantee O(n+m) linear time complexity without backtracking the main text pointer.",
+        pattern: ""
+      },
+      worstcase: {
+        source: "A".repeat(400) + "B",
+        suspect: "A".repeat(2500) + "B" + "A".repeat(1500) + "B",
+        pattern: "A".repeat(60) + "B"
+      }
+    };
+
+    /**
+     * =========================================================================
+     * 3. UI HELPERS & NAVIGATION
+     * =========================================================================
+     */
+
+    // Show non-blocking toast message (replaces alert())
+    function showToast(message, type = "info") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+
+      const styles = {
+        info: "bg-slate-900 border-indigo-500/50 text-slate-100",
+        success: "bg-slate-900 border-emerald-500/50 text-emerald-200",
+        warning: "bg-slate-900 border-amber-500/50 text-amber-200",
+        error: "bg-slate-900 border-rose-500/50 text-rose-200"
+      };
+
+      toast.className = `pointer-events-auto border rounded-xl px-4 py-3 text-xs sm:text-sm font-medium shadow-xl transition-all duration-300 ${styles[type] || styles.info}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-x-4");
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    // Switch between Tab 1 (Analyzer) and Tab 2 (Benchmark)
+    function switchTab(tabName) {
+      const analyzerSection = document.getElementById("tab-analyzer");
+      const benchmarkSection = document.getElementById("tab-benchmark");
+      const btnAnalyzer = document.getElementById("tab-btn-analyzer");
+      const btnBenchmark = document.getElementById("tab-btn-benchmark");
+
+      if (tabName === "analyzer") {
+        analyzerSection.classList.remove("hidden");
+        benchmarkSection.classList.add("hidden");
+        btnAnalyzer.className = "flex-1 md:flex-none px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-2";
+        btnBenchmark.className = "flex-1 md:flex-none px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2";
+        btnAnalyzer.setAttribute("aria-selected", "true");
+        btnBenchmark.setAttribute("aria-selected", "false");
+      } else {
+        analyzerSection.classList.add("hidden");
+        benchmarkSection.classList.remove("hidden");
+        btnBenchmark.className = "flex-1 md:flex-none px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 bg-indigo-600 text-white shadow-sm flex items-center justify-center gap-2";
+        btnAnalyzer.className = "flex-1 md:flex-none px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2";
+        btnBenchmark.setAttribute("aria-selected", "true");
+        btnAnalyzer.setAttribute("aria-selected", "false");
+
+        // Auto-run benchmark on first visit if charts are empty
+        if (!benchmarkHasRun) {
+          runBenchmarkSuite();
+        }
+      }
+    }
+
+    // Update character and word counters
+    function updateCounts() {
+      const src = document.getElementById("source-text").value;
+      const sus = document.getElementById("suspect-text").value;
+      const countWords = (str) => (str.trim() ? str.trim().split(/\s+/).length : 0);
+
+      document.getElementById("source-count").textContent = `${src.length.toLocaleString()} chars | ${countWords(src)} words`;
+      document.getElementById("suspect-count").textContent = `${sus.length.toLocaleString()} chars | ${countWords(sus)} words`;
+    }
+
+    // Load a preset dataset
+    function loadPreset(key) {
+      const preset = PRESETS[key];
+      if (!preset) return;
+      document.getElementById("source-text").value = preset.source;
+      document.getElementById("suspect-text").value = preset.suspect;
+      document.getElementById("specific-pattern").value = preset.pattern;
+      updateCounts();
+      runPlagiarismAnalysis();
+      showToast(`Loaded "${key === 'essay' ? 'Academic Essay' : key === 'tech' ? 'Code / Tech Article' : 'Worst-Case Repetitive Text'}" preset.`, "info");
+    }
+
+    // Clear all inputs
+    function clearInputs() {
+      document.getElementById("source-text").value = "";
+      document.getElementById("suspect-text").value = "";
+      document.getElementById("specific-pattern").value = "";
+      updateCounts();
+      document.getElementById("highlighted-output").textContent = "Enter text and click Run Analysis to view matches...";
+      updateGauge(0, "Ready", 0, 0);
+      showToast("Inputs cleared.", "info");
+    }
+
+    // Escape HTML to prevent XSS when rendering highlighted matches
+    function escapeHTML(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    /**
+     * =========================================================================
+     * 4. PLAGIARISM & PATTERN ANALYZER LOGIC (TAB 1)
+     * =========================================================================
+     */
+
+    // Extract overlapping n-gram word phrases from the source text
+    function extractNGrams(text, n) {
+      const cleaned = text.replace(/\s+/g, " ").trim();
+      if (!cleaned) return [];
+      const words = cleaned.split(" ");
+      if (words.length < n) {
+        return [cleaned];
+      }
+      const uniquePhrases = new Set();
+      for (let i = 0; i <= words.length - n; i++) {
+        const phrase = words.slice(i, i + n).join(" ");
+        if (phrase.length >= 6) {
+          uniquePhrases.add(phrase);
+        }
+      }
+      return Array.from(uniquePhrases);
+    }
+
+    // Merge overlapping highlight intervals [start, end]
+    function mergeIntervals(intervals) {
+      if (!intervals.length) return [];
+      intervals.sort((a, b) => a[0] - b[0]);
+      const merged = [intervals[0]];
+      for (let i = 1; i < intervals.length; i++) {
+        const prev = merged[merged.length - 1];
+        const curr = intervals[i];
+        if (curr[0] <= prev[1]) {
+          prev[1] = Math.max(prev[1], curr[1]);
+        } else {
+          merged.push(curr);
+        }
+      }
+      return merged;
+    }
+
+    // Render highlighted HTML for the suspect document
+    function renderHighlightedText(text, intervals) {
+      if (!intervals.length) {
+        return escapeHTML(text);
+      }
+      let html = "";
+      let lastIdx = 0;
+      for (const [start, end] of intervals) {
+        html += escapeHTML(text.slice(lastIdx, start));
+        html += `<mark class="bg-rose-500/30 text-rose-100 border-b-2 border-rose-500 rounded-sm px-0.5">${escapeHTML(text.slice(start, end))}</mark>`;
+        lastIdx = end;
+      }
+      html += escapeHTML(text.slice(lastIdx));
+      return html;
+    }
+
+    // Update circular similarity gauge
+    function updateGauge(percentage, modeText, patternsTested, matchesFound) {
+      const clamped = Math.max(0, Math.min(100, percentage));
+      const circumference = 2 * Math.PI * 52; // r = 52
+      const offset = circumference - (clamped / 100) * circumference;
+
+      const ring = document.getElementById("similarity-ring");
+      const percentEl = document.getElementById("similarity-percent");
+      const verdictEl = document.getElementById("verdict-badge");
+
+      ring.style.strokeDashoffset = offset;
+      percentEl.textContent = `${clamped.toFixed(1)}%`;
+      document.getElementById("analysis-mode-badge").textContent = modeText;
+      document.getElementById("stat-patterns-tested").textContent = patternsTested.toLocaleString();
+      document.getElementById("stat-matches-found").textContent = matchesFound.toLocaleString();
+
+      // Dynamic color based on severity
+      if (clamped >= 50) {
+        ring.style.stroke = "#f43f5e"; // Rose
+        verdictEl.className = "mt-4 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/30";
+        verdictEl.textContent = "High Similarity Detected";
+      } else if (clamped >= 20) {
+        ring.style.stroke = "#f59e0b"; // Amber
+        verdictEl.className = "mt-4 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30";
+        verdictEl.textContent = "Moderate Overlap Detected";
+      } else if (clamped > 0) {
+        ring.style.stroke = "#10b981"; // Emerald
+        verdictEl.className = "mt-4 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
+        verdictEl.textContent = "Low Similarity / Mostly Original";
+      } else {
+        ring.style.stroke = "#6366f1"; // Indigo
+        verdictEl.className = "mt-4 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300";
+        verdictEl.textContent = "No Exact Matches Found";
+      }
+    }
+
+    // Main Analysis Runner
+    function runPlagiarismAnalysis() {
+      try {
+        const sourceRaw = document.getElementById("source-text").value;
+        const suspectRaw = document.getElementById("suspect-text").value;
+        const specificPattern = document.getElementById("specific-pattern").value;
+        const ngramSize = parseInt(document.getElementById("ngram-size").value, 10) || 4;
+
+        if (!suspectRaw.trim()) {
+          showToast("Please enter text in the Suspect / Target Document.", "warning");
+          return;
+        }
+
+        let patterns = [];
+        let modeText = "";
+        let targetText = "";
+
+        if (specificPattern.length > 0) {
+          // Direct exact pattern search mode (case-sensitive for accuracy on worst-case tests)
+          patterns = [specificPattern];
+          targetText = suspectRaw;
+          modeText = `Exact Pattern Search (m = ${specificPattern.length})`;
+        } else {
+          if (!sourceRaw.trim()) {
+            showToast("Please enter text in the Original / Source Document or provide a Specific Pattern.", "warning");
+            return;
+          }
+          // Normalize whitespace and lowercase for document-level plagiarism comparison
+          const normalizedSource = sourceRaw.replace(/\s+/g, " ").toLowerCase();
+          targetText = suspectRaw.replace(/\s+/g, " ");
+          const normalizedSuspect = targetText.toLowerCase();
+          patterns = extractNGrams(normalizedSource, ngramSize);
+          modeText = `Document ${ngramSize}-Gram Matching`;
+          // We search on lowercase copy, while keeping indices aligned with targetText
+          runAlgorithmsAndRender(normalizedSuspect, targetText, patterns, modeText);
+          return;
+        }
+
+        runAlgorithmsAndRender(targetText, targetText, patterns, modeText);
+      } catch (err) {
+        console.error("Analysis Error:", err);
+        showToast("An error occurred while running the analysis.", "error");
+      }
+    }
+
+    function runAlgorithmsAndRender(searchText, displayText, patterns, modeText) {
+      // Accumulators for all 3 algorithms
+      let naiveTime = 0, naiveComps = 0, naiveMatches = 0;
+      let rkTime = 0, rkComps = 0, rkMatches = 0, rkCollisions = 0;
+      let kmpTime = 0, kmpComps = 0, kmpMatches = 0;
+
+      const matchIntervals = [];
+
+      // 1. Run Naïve across all patterns
+      const t0 = performance.now();
+      for (const pat of patterns) {
+        const res = naiveSearch(searchText, pat);
+        naiveComps += res.comparisons;
+        naiveMatches += res.matches.length;
+      }
+      naiveTime = performance.now() - t0;
+
+      // 2. Run Rabin-Karp across all patterns
+      const t1 = performance.now();
+      for (const pat of patterns) {
+        const res = rabinKarpSearch(searchText, pat);
+        rkComps += res.comparisons;
+        rkMatches += res.matches.length;
+        rkCollisions += res.collisions;
+      }
+      rkTime = performance.now() - t1;
+
+      // 3. Run KMP across all patterns (also collect match intervals for highlighting)
+      const t2 = performance.now();
+      for (const pat of patterns) {
+        const res = kmpSearch(searchText, pat);
+        kmpComps += res.comparisons;
+        kmpMatches += res.matches.length;
+        for (const idx of res.matches) {
+          matchIntervals.push([idx, idx + pat.length]);
+        }
+      }
+      kmpTime = performance.now() - t2;
+
+      // Merge intervals and compute character coverage percentage
+      const merged = mergeIntervals(matchIntervals);
+      let matchedChars = 0;
+      for (const [start, end] of merged) {
+        matchedChars += (end - start);
+      }
+      const similarityPct = displayText.length > 0 ? (matchedChars / displayText.length) * 100 : 0;
+
+      // Update UI Gauge & Highlights
+      updateGauge(similarityPct, modeText, patterns.length, kmpMatches);
+      document.getElementById("highlighted-output").innerHTML = renderHighlightedText(displayText, merged);
+
+      // Update Performance Cards
+      document.getElementById("naive-time").textContent = `${naiveTime.toFixed(3)} ms`;
+      document.getElementById("naive-comps").textContent = naiveComps.toLocaleString();
+      document.getElementById("naive-matches").textContent = naiveMatches.toLocaleString();
+
+      document.getElementById("rk-time").textContent = `${rkTime.toFixed(3)} ms`;
+      document.getElementById("rk-comps").textContent = rkComps.toLocaleString();
+      document.getElementById("rk-matches").textContent = `${rkCollisions.toLocaleString()} / ${rkMatches.toLocaleString()}`;
+
+      document.getElementById("kmp-time").textContent = `${kmpTime.toFixed(3)} ms`;
+      document.getElementById("kmp-comps").textContent = kmpComps.toLocaleString();
+      document.getElementById("kmp-matches").textContent = kmpMatches.toLocaleString();
+
+      // Relative comparison progress bars
+      const maxComps = Math.max(naiveComps, rkComps, kmpComps, 1);
+      document.getElementById("naive-bar").style.width = `${Math.max(4, (naiveComps / maxComps) * 100)}%`;
+      document.getElementById("rk-bar").style.width = `${Math.max(4, (rkComps / maxComps) * 100)}%`;
+      document.getElementById("kmp-bar").style.width = `${Math.max(4, (kmpComps / maxComps) * 100)}%`;
+
+      // Determine fastest algorithm
+      const algos = [
+        { name: "Naïve Matching", time: naiveTime, comps: naiveComps, matches: naiveMatches, color: "text-rose-300", note: "Baseline brute-force character scan" },
+        { name: "Rabin-Karp", time: rkTime, comps: rkComps, matches: rkMatches, color: "text-indigo-300", note: `Rolling hash (${rkCollisions} spurious collisions)` },
+        { name: "KMP Algorithm", time: kmpTime, comps: kmpComps, matches: kmpMatches, color: "text-emerald-300", note: "Zero text backtracking via LPS array" }
+      ];
+
+      const fastest = [...algos].sort((a, b) => a.time - b.time)[0];
+      document.getElementById("fastest-algo-badge").textContent = `Fastest: ${fastest.name} (${fastest.time.toFixed(3)} ms)`;
+
+      // Populate Comparison Table
+      const tbody = document.getElementById("comparison-table-body");
+      tbody.innerHTML = algos.map((a) => `
+        <tr class="hover:bg-slate-800/40 transition-colors">
+          <td class="py-3 px-4 font-semibold ${a.color}">${a.name}</td>
+          <td class="py-3 px-4 font-mono text-white">${a.time.toFixed(3)} ms</td>
+          <td class="py-3 px-4 font-mono">${a.comps.toLocaleString()}</td>
+          <td class="py-3 px-4 font-mono">${a.matches.toLocaleString()}</td>
+          <td class="py-3 px-4 text-xs text-slate-400">${a.note}</td>
+        </tr>
+      `).join("");
+    }
+
+    /**
+     * =========================================================================
+     * 5. PERFORMANCE BENCHMARK SUITE & CHART.JS VISUALIZATION (TAB 2)
+     * =========================================================================
+     */
+    let benchmarkMode = "normal"; // 'normal' | 'worst'
+    let benchmarkHasRun = false;
+    let timeChartInstance = null;
+    let compChartInstance = null;
+
+    function setBenchmarkMode(mode) {
+      benchmarkMode = mode;
+      const normalBtn = document.getElementById("dist-normal-btn");
+      const worstBtn = document.getElementById("dist-worst-btn");
+
+      if (mode === "normal") {
+        normalBtn.className = "py-2 px-3 rounded-lg text-xs font-semibold transition-all bg-indigo-600 text-white";
+        worstBtn.className = "py-2 px-3 rounded-lg text-xs font-semibold transition-all bg-slate-800 text-slate-300 hover:bg-slate-700";
+      } else {
+        worstBtn.className = "py-2 px-3 rounded-lg text-xs font-semibold transition-all bg-amber-600 text-white";
+        normalBtn.className = "py-2 px-3 rounded-lg text-xs font-semibold transition-all bg-slate-800 text-slate-300 hover:bg-slate-700";
+      }
+    }
+
+    // Generate synthetic test text & pattern for benchmarking
+    function generateBenchmarkData(docSize, patLen, mode) {
+      if (mode === "worst") {
+        // Classic worst-case for Naïve: "AAAA...A" with pattern "AAA...B"
+        const text = "A".repeat(docSize - 1) + "B";
+        const pattern = "A".repeat(patLen - 1) + "B";
+        return { text, pattern };
+      } else {
+        // Realistic pseudo-random English-like text with embedded occurrences
+        const alphabet = "abcdefghijklmnopqrstuvwxyz     ";
+        let chars = new Array(docSize);
+        let seed = 42;
+        for (let i = 0; i < docSize; i++) {
+          seed = (seed * 1664525 + 1013904223) % 4294967296;
+          chars[i] = alphabet[seed % alphabet.length];
+        }
+        const text = chars.join("");
+        const startIdx = Math.floor(docSize * 0.75);
+        const pattern = text.slice(startIdx, startIdx + patLen);
+        return { text, pattern };
+      }
+    }
+
+    // Run Benchmark across 5K, 15K, 30K, 50K chars
+    function runBenchmarkSuite() {
+      const btnText = document.getElementById("benchmark-btn-text");
+      const btn = document.getElementById("run-benchmark-btn");
+      btn.disabled = true;
+      btnText.textContent = "Running...";
+
+      // Defer slightly so button UI updates smoothly
+      setTimeout(() => {
+        try {
+          const sizes = [5000, 15000, 30000, 50000];
+          const patLen = parseInt(document.getElementById("bench-pattern-len").value, 10) || 20;
+
+          const labels = sizes.map((s) => `${s / 1000}K`);
+          const naiveTimes = [], rkTimes = [], kmpTimes = [];
+          const naiveComps = [], rkComps = [], kmpComps = [];
+          const tableRows = [];
+
+          for (const size of sizes) {
+            const { text, pattern } = generateBenchmarkData(size, patLen, benchmarkMode);
+
+            // Naïve timing
+            const t0 = performance.now();
+            const rNaive = naiveSearch(text, pattern);
+            const dtNaive = performance.now() - t0;
+
+            // Rabin-Karp timing
+            const t1 = performance.now();
+            const rRK = rabinKarpSearch(text, pattern);
+            const dtRK = performance.now() - t1;
+
+            // KMP timing
+            const t2 = performance.now();
+            const rKMP = kmpSearch(text, pattern);
+            const dtKMP = performance.now() - t2;
+
+            naiveTimes.push(Number(dtNaive.toFixed(3)));
+            rkTimes.push(Number(dtRK.toFixed(3)));
+            kmpTimes.push(Number(dtKMP.toFixed(3)));
+
+            naiveComps.push(rNaive.comparisons);
+            rkComps.push(rRK.comparisons);
+            kmpComps.push(rKMP.comparisons);
+
+            tableRows.push(`
+              <tr class="hover:bg-slate-800/40 transition-colors">
+                <td class="py-3 px-4 font-semibold text-white">${size.toLocaleString()} chars</td>
+                <td class="py-3 px-4 text-rose-300">${dtNaive.toFixed(3)} ms <span class="text-slate-500">/</span> ${rNaive.comparisons.toLocaleString()}</td>
+                <td class="py-3 px-4 text-indigo-300">${dtRK.toFixed(3)} ms <span class="text-slate-500">/</span> ${rRK.comparisons.toLocaleString()}</td>
+                <td class="py-3 px-4 text-emerald-300">${dtKMP.toFixed(3)} ms <span class="text-slate-500">/</span> ${rKMP.comparisons.toLocaleString()}</td>
+              </tr>
+            `);
+          }
+
+          document.getElementById("benchmark-table-body").innerHTML = tableRows.join("");
+          renderBenchmarkCharts(labels, naiveTimes, rkTimes, kmpTimes, naiveComps, rkComps, kmpComps);
+          benchmarkHasRun = true;
+          showToast(`Benchmark complete (${benchmarkMode === "worst" ? "Worst-Case" : "Normal Text"}, m=${patLen}).`, "success");
+        } catch (err) {
+          console.error("Benchmark Error:", err);
+          showToast("Benchmark failed to execute.", "error");
+        } finally {
+          btn.disabled = false;
+          btnText.textContent = "Run Benchmark";
+        }
+      }, 40);
+    }
+
+    // Render Chart.js visualizations
+    function renderBenchmarkCharts(labels, naiveTimes, rkTimes, kmpTimes, naiveComps, rkComps, kmpComps) {
+      const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: {
+            labels: { color: "#cbd5e1", font: { family: "Inter", size: 12 } }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: "#94a3b8", font: { family: "JetBrains Mono", size: 11 } },
+            grid: { color: "rgba(51, 65, 85, 0.35)" }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: "#94a3b8", font: { family: "JetBrains Mono", size: 11 } },
+            grid: { color: "rgba(51, 65, 85, 0.35)" }
+          }
+        }
+      };
+
+      // Destroy previous chart instances if they exist
+      if (timeChartInstance) timeChartInstance.destroy();
+      if (compChartInstance) compChartInstance.destroy();
+
+      // 1. Execution Time Line Chart
+      const timeCtx = document.getElementById("timeChart").getContext("2d");
+      timeChartInstance = new Chart(timeCtx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Naïve (ms)",
+              data: naiveTimes,
+              borderColor: "#f43f5e",
+              backgroundColor: "rgba(244, 63, 94, 0.15)",
+              borderWidth: 2.5,
+              tension: 0.3,
+              fill: true,
+              pointRadius: 4
+            },
+            {
+              label: "Rabin-Karp (ms)",
+              data: rkTimes,
+              borderColor: "#6366f1",
+              backgroundColor: "rgba(99, 102, 241, 0.15)",
+              borderWidth: 2.5,
+              tension: 0.3,
+              fill: true,
+              pointRadius: 4
+            },
+            {
+              label: "KMP (ms)",
+              data: kmpTimes,
+              borderColor: "#10b981",
+              backgroundColor: "rgba(16, 185, 129, 0.15)",
+              borderWidth: 2.5,
+              tension: 0.3,
+              fill: true,
+              pointRadius: 4
+            }
+          ]
+        },
+        options: commonOptions
+      });
+
+      // 2. Character Comparisons Bar Chart
+      const compCtx = document.getElementById("compChart").getContext("2d");
+      compChartInstance = new Chart(compCtx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Naïve Comparisons",
+              data: naiveComps,
+              backgroundColor: "rgba(244, 63, 94, 0.75)",
+              borderRadius: 6
+            },
+            {
+              label: "Rabin-Karp Comparisons",
+              data: rkComps,
+              backgroundColor: "rgba(99, 102, 241, 0.75)",
+              borderRadius: 6
+            },
+            {
+              label: "KMP Comparisons",
+              data: kmpComps,
+              backgroundColor: "rgba(16, 185, 129, 0.75)",
+              borderRadius: 6
+            }
+          ]
+        },
+        options: commonOptions
+      });
+    }
+
+    /**
+     * =========================================================================
+     * 6. INITIALIZATION ON PAGE LOAD
+     * =========================================================================
+     */
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("source-text").addEventListener("input", updateCounts);
+      document.getElementById("suspect-text").addEventListener("input", updateCounts);
+
+      // Preload Academic Essay sample on startup so dashboard looks rich immediately
+      document.getElementById("source-text").value = PRESETS.essay.source;
+      document.getElementById("suspect-text").value = PRESETS.essay.suspect;
+      updateCounts();
+      runPlagiarismAnalysis();
+    });
+  </script>
+</body>
+</html>
